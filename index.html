@@ -3,173 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Physique Projector</title>
+    <title>12% Project: Phased</title>
     <style>
-        :root { --accent: #00ff96; --bg: #0b0b0b; --card: #1a1a1a; --danger: #ff4d4d; }
-        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
+        :root { --accent: #00ff96; --bg: #050505; --card: #111; --danger: #ff4d4d; --phase: #00d1ff; }
+        body { background: var(--bg); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
         .container { width: 100%; max-width: 400px; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
         
-        .stat-header { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        .main-val { font-size: 2.8rem; font-weight: 800; color: var(--accent); margin-bottom: 5px; display: block; }
+        /* Stats Dashboard */
+        .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 15px; }
+        .stat-label { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1.5px; }
+        .main-val { font-size: 3.2rem; font-weight: 900; color: var(--accent); margin: 5px 0; display: block; }
         
-        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        label { display: block; font-size: 0.7rem; color: #666; margin-bottom: 4px; }
-        input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; }
-        input:focus { border-color: var(--accent); outline: none; }
+        /* Milestone Badge */
+        .milestone-badge { background: rgba(0, 209, 255, 0.1); color: var(--phase); border: 1px solid var(--phase); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; text-align: center; text-transform: uppercase; margin-top: 10px; }
 
-        .btn { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
-        .btn-clear { background: none; border: 1px solid #333; color: #555; margin-top: 10px; font-size: 0.7rem; width: 100%; cursor: pointer; border-radius: 8px; padding: 5px; }
+        /* Inputs */
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 0.65rem; color: #555; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        input { background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; font-size: 1.1rem; outline: none; transition: border 0.2s; }
+        input:focus { border-color: var(--accent); }
 
-        .history-list { margin-top: 20px; width: 100%; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid #222; }
-        .log-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #222; text-align: center; align-items: center; }
-        .log-header { color: #666; font-weight: bold; background: #161616; border-bottom: 1px solid #333; }
-        .log-scroll { max-height: 300px; overflow-y: auto; }
+        .commit-btn { width: 100%; padding: 18px; background: var(--accent); color: #000; border: none; border-radius: 12px; font-weight: 900; margin-top: 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-size: 1rem; }
+        .commit-btn:active { transform: scale(0.97); }
+
+        /* Color-Coded History */
+        .history-container { width: 100%; margin-top: 20px; background: #0a0a0a; border-radius: 12px; border: 1px solid #222; overflow: hidden; }
+        .log-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
+        .log-header { background: #161616; color: #555; font-weight: bold; font-size: 0.7rem; text-transform: uppercase; }
+        .scroll-area { max-height: 280px; overflow-y: auto; }
         
-        .del-btn { color: #555; cursor: pointer; font-size: 1.2rem; font-weight: bold; transition: color 0.2s; }
-        .del-btn:hover { color: var(--danger); }
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .green-bg { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .red-bg { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+        .del-btn { color: #333; cursor: pointer; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card">
-            <div class="stat-header">Projected Goal Arrival</div>
-            <span class="main-val" id="eta-display">---</span>
-            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Update metrics to project</div>
+            <div class="stat-label">Arrival Deadline</div>
+            <span class="main-val" id="eta-text">---</span>
+            <div id="milestone-text" class="milestone-badge">Awaiting Data...</div>
         </div>
 
         <div class="card">
-            <div class="input-row" style="margin-top:0;">
-                <div>
-                    <label>Weight (lbs)</label>
-                    <input type="number" id="cur-w" value="195.00" step="0.01">
+            <div class="stat-label" style="color:var(--phase)">Lean Mass: <span id="lbm-display">0.00</span> lbs</div>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label>Weight</label>
+                    <input type="number" id="in-w" value="195.00" step="0.01">
                 </div>
-                <div>
+                <div class="input-group">
                     <label>Current BF%</label>
-                    <input type="number" id="cur-bf" value="20.00" step="0.01">
+                    <input type="number" id="in-bf" value="20.00" step="0.01">
                 </div>
-            </div>
-            <div class="input-row">
-                <div>
+                <div class="input-group">
                     <label>Goal BF%</label>
-                    <input type="number" id="goal-bf" value="12.00" step="0.01">
+                    <input type="number" id="in-goal" value="12.00" step="0.1">
                 </div>
-                <div>
-                    <label>Today's Deficit</label>
-                    <input type="number" id="today-def" value="500">
+                <div class="input-group">
+                    <label>Deficit</label>
+                    <input type="number" id="in-def" value="500">
                 </div>
             </div>
-            
-            <button class="btn" onclick="commitDay()">Commit Today & Project</button>
-            <button class="btn btn-clear" onclick="clearAllData()">Wipe All Data</button>
+            <button class="commit-btn" onclick="commitEntry()">Commit Today's Progress</button>
         </div>
 
-        <div class="history-list">
-            <div class="log-item log-header">
-                <span>Date</span><span>Lbs</span><span>BF%</span><span>Def</span><span></span>
+        <div class="history-container">
+            <div class="log-row log-header">
+                <span>Date</span><span>Lbs</span><span>BF%</span><span>Deficit</span><span></span>
             </div>
-            <div id="history-box" class="log-scroll"></div>
+            <div id="history-box" class="scroll-area"></div>
         </div>
     </div>
 
 <script>
-    let history = JSON.parse(localStorage.getItem('physique_logs_v3')) || [];
+    let logs = JSON.parse(localStorage.getItem('shred_logs_vFinal')) || [];
 
-    function updateDisplay() {
-        const w = parseFloat(document.getElementById('cur-w').value);
-        const cbf = parseFloat(document.getElementById('cur-bf').value) / 100;
-        const gbf = parseFloat(document.getElementById('goal-bf').value) / 100;
-        const def = parseFloat(document.getElementById('today-def').value);
+    function updateUI() {
+        const w = parseFloat(document.getElementById('in-w').value);
+        const bf = parseFloat(document.getElementById('in-bf').value) / 100;
+        const goal = parseFloat(document.getElementById('in-goal').value) / 100;
+        const def = parseFloat(document.getElementById('in-def').value);
 
-        if (isNaN(w) || isNaN(cbf) || isNaN(gbf)) return;
+        if (isNaN(w) || isNaN(bf) || isNaN(goal)) return;
 
-        const lbm = w * (1 - cbf);
-        const targetW = lbm / (1 - gbf);
-        const lbsLeft = w - targetW;
+        // Math
+        const lbm = w * (1 - bf);
+        document.getElementById('lbm-display').innerText = lbm.toFixed(2);
+        
+        const targetW = lbm / (1 - goal);
+        const diff = w - targetW;
 
-        if (def > 0 && lbsLeft > 0) {
-            const days = (lbsLeft * 3500) / def;
-            const targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + days);
-            document.getElementById('eta-display').innerText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(2)} lbs of fat to goal`;
-        } else if (lbsLeft <= 0) {
-            document.getElementById('eta-display').innerText = "GOAL REACHED";
-            document.getElementById('status-subtext').innerText = "Target physique achieved";
+        // Milestone Logic
+        const bfPct = bf * 100;
+        const ms = document.getElementById('milestone-text');
+        if (bfPct > 18) ms.innerText = "Phase 1: Cutting the Bulk";
+        else if (bfPct > 15) ms.innerText = "Phase 2: Muscle Definition Emerging";
+        else if (bfPct > 13) ms.innerText = "Phase 3: The Final Hardening";
+        else if (bfPct > goal * 100) ms.innerText = "Strike Zone: Within Reach";
+        else ms.innerText = "Goal Achieved: Maintenance Mode";
+
+        // ETA Logic
+        const etaDisplay = document.getElementById('eta-text');
+        if (def > 0 && diff > 0) {
+            const days = (diff * 3500) / def;
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            etaDisplay.innerText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            etaDisplay.style.color = "var(--accent)";
+        } else if (diff <= 0) {
+            etaDisplay.innerText = "FINISHED";
+            etaDisplay.style.color = "white";
         } else {
-            document.getElementById('eta-display').innerText = "PAUSED";
-            document.getElementById('status-subtext').innerText = "Surplus/Maintenance active";
+            etaDisplay.innerText = "STALLED";
+            etaDisplay.style.color = "var(--danger)";
         }
-        renderHistory();
+
+        renderLogs();
     }
 
-    function commitDay() {
-        const w = parseFloat(document.getElementById('cur-w').value);
-        const cbf = parseFloat(document.getElementById('cur-bf').value);
-        const def = parseFloat(document.getElementById('today-def').value);
-        
+    function commitEntry() {
+        const w = parseFloat(document.getElementById('in-w').value);
+        const bf = parseFloat(document.getElementById('in-bf').value);
+        const def = parseFloat(document.getElementById('in-def').value);
+
         const entry = {
-            id: Date.now(), // Unique ID for individual deletion
+            id: Date.now(),
             date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
-            weight: w.toFixed(2),
-            bf: cbf.toFixed(2),
+            w: w.toFixed(2),
+            bf: bf.toFixed(2),
             def: def
         };
-        
-        history.push(entry);
-        saveAndSync();
 
-        // Project for tomorrow
-        const weightLost = def / 3500;
-        const newWeight = w - weightLost;
-        const lbm = w * (1 - (cbf/100));
-        const newBF = ((newWeight - lbm) / newWeight) * 100;
+        logs.push(entry);
+        localStorage.setItem('shred_logs_vFinal', JSON.stringify(logs));
 
-        document.getElementById('cur-w').value = newWeight.toFixed(2);
-        document.getElementById('cur-bf').value = newBF.toFixed(2);
+        // Auto-Project Tomorrow
+        const lbsLost = def / 3500;
+        const newW = w - lbsLost;
+        const lbm = w * (1 - (bf/100));
+        const newBF = ((newW - lbm) / newW) * 100;
 
-        updateDisplay();
-        
+        document.getElementById('in-w').value = newW.toFixed(2);
+        document.getElementById('in-bf').value = newBF.toFixed(2);
+
+        updateUI();
         const box = document.getElementById('history-box');
         box.scrollTop = box.scrollHeight;
     }
 
     function deleteEntry(id) {
-        if(confirm("Delete this entry?")) {
-            history = history.filter(item => item.id !== id);
-            saveAndSync();
-            updateDisplay();
+        if(confirm("Delete this log?")) {
+            logs = logs.filter(l => l.id !== id);
+            localStorage.setItem('shred_logs_vFinal', JSON.stringify(logs));
+            updateUI();
         }
     }
 
-    function saveAndSync() {
-        localStorage.setItem('physique_logs_v3', JSON.stringify(history));
-    }
-
-    function renderHistory() {
+    function renderLogs() {
         const box = document.getElementById('history-box');
-        box.innerHTML = history.map(item => `
-            <div class="log-item">
-                <span>${item.date}</span>
-                <span>${item.weight}</span>
-                <span>${item.bf}%</span>
-                <span style="color:${item.def >= 0 ? 'var(--accent)' : 'var(--danger)'}">${item.def}</span>
-                <span class="del-btn" onclick="deleteEntry(${item.id})">×</span>
-            </div>
-        `).join('');
+        box.innerHTML = logs.map(l => {
+            const colorClass = l.def >= 0 ? 'green-bg' : 'red-bg';
+            const textColor = l.def >= 0 ? 'var(--accent)' : 'var(--danger)';
+            return `
+                <div class="log-row">
+                    <span>${l.date}</span>
+                    <span>${l.w}</span>
+                    <span>${l.bf}%</span>
+                    <span style="color:${textColor}"><span class="status-dot ${colorClass}"></span>${l.def}</span>
+                    <span class="del-btn" onclick="deleteEntry(${l.id})">×</span>
+                </div>
+            `;
+        }).join('');
     }
 
-    function clearAllData() {
-        if(confirm("Wipe all history?")) {
-            history = [];
-            localStorage.removeItem('physique_logs_v3');
-            updateDisplay();
-        }
-    }
-
-    document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateDisplay));
-    updateDisplay();
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateUI));
+    updateUI();
 </script>
 
 </body>
