@@ -19,37 +19,39 @@
         input:focus { border-color: var(--accent); outline: none; }
 
         .btn { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
+        .btn:active { background: #00cc78; }
         .btn-clear { background: none; border: 1px solid #333; color: #555; margin-top: 10px; font-size: 0.7rem; }
 
-        .history-list { margin-top: 20px; width: 100%; }
-        .log-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; font-size: 0.8rem; padding: 10px 0; border-bottom: 1px solid #222; text-align: center; }
-        .log-header { color: #555; font-weight: bold; border-bottom: 1px solid #333; }
+        .history-list { margin-top: 20px; width: 100%; background: #111; border-radius: 8px; overflow: hidden; }
+        .log-item { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #222; text-align: center; }
+        .log-header { color: #666; font-weight: bold; background: #161616; border-bottom: 1px solid #333; }
+        .log-scroll { max-height: 300px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card">
-            <div class="stat-header">Projected Goal Date</div>
+            <div class="stat-header">Projected Goal Arrival</div>
             <span class="main-val" id="eta-display">---</span>
-            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Set your parameters below</div>
+            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Update weight/BF% to begin</div>
         </div>
 
         <div class="card">
             <div class="input-row" style="margin-top:0;">
                 <div>
                     <label>Current Weight</label>
-                    <input type="number" id="cur-w" value="195.0" step="0.1">
+                    <input type="number" id="cur-w" value="195.00" step="0.01">
                 </div>
                 <div>
                     <label>Current BF%</label>
-                    <input type="number" id="cur-bf" value="20.0" step="0.1">
+                    <input type="number" id="cur-bf" value="20.00" step="0.01">
                 </div>
             </div>
             <div class="input-row">
                 <div>
                     <label>Goal BF%</label>
-                    <input type="number" id="goal-bf" value="12.0" step="0.1">
+                    <input type="number" id="goal-bf" value="12.00" step="0.01">
                 </div>
                 <div>
                     <label>Today's Deficit</label>
@@ -58,26 +60,28 @@
             </div>
             
             <button class="btn" onclick="commitDay()">Commit Today & Project</button>
-            <button class="btn btn-clear" onclick="clearData()">Clear History</button>
+            <button class="btn btn-clear" onclick="clearData()">Clear All Data</button>
         </div>
 
         <div class="history-list">
             <div class="log-item log-header">
-                <span>Date</span><span>Weight</span><span>BF%</span><span>Deficit</span>
+                <span>Date</span><span>Lbs</span><span>BF%</span><span>Deficit</span>
             </div>
-            <div id="history-box"></div>
+            <div id="history-box" class="log-scroll"></div>
         </div>
     </div>
 
 <script>
-    // Load data from LocalStorage on start
-    let history = JSON.parse(localStorage.getItem('physique_logs')) || [];
+    // Persistent Storage
+    let history = JSON.parse(localStorage.getItem('physique_logs_v2')) || [];
 
     function updateDisplay() {
         const w = parseFloat(document.getElementById('cur-w').value);
         const cbf = parseFloat(document.getElementById('cur-bf').value) / 100;
         const gbf = parseFloat(document.getElementById('goal-bf').value) / 100;
         const def = parseFloat(document.getElementById('today-def').value);
+
+        if (isNaN(w) || isNaN(cbf) || isNaN(gbf)) return;
 
         const lbm = w * (1 - cbf);
         const targetW = lbm / (1 - gbf);
@@ -87,11 +91,14 @@
             const days = (lbsLeft * 3500) / def;
             const targetDate = new Date();
             targetDate.setDate(targetDate.getDate() + days);
-            document.getElementById('eta-display').innerText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(1)} lbs of fat to burn`;
+            document.getElementById('eta-display').innerText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(2)} lbs of fat until goal`;
+        } else if (lbsLeft <= 0) {
+            document.getElementById('eta-display').innerText = "GOAL HIT";
+            document.getElementById('status-subtext').innerText = "Maintaining target physique";
         } else {
-            document.getElementById('eta-display').innerText = "STALLED";
-            document.getElementById('status-subtext').innerText = "Adjust deficit to resume projection";
+            document.getElementById('eta-display').innerText = "PAUSED";
+            document.getElementById('status-subtext').innerText = "Surplus/Maintenance active";
         }
         renderHistory();
     }
@@ -101,30 +108,32 @@
         const cbf = parseFloat(document.getElementById('cur-bf').value);
         const def = parseFloat(document.getElementById('today-def').value);
         
-        // 1. Log today's state
         const entry = {
             date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
-            weight: w.toFixed(1),
-            bf: cbf.toFixed(1),
+            weight: w.toFixed(2),
+            bf: cbf.toFixed(2),
             def: def
         };
-        history.unshift(entry);
-        localStorage.setItem('physique_logs', JSON.stringify(history));
+        
+        // Push to end of array (Oldest at top, Newest at bottom)
+        history.push(entry);
+        localStorage.setItem('physique_logs_v2', JSON.stringify(history));
 
-        // 2. MATH: Calculate tomorrow's projected starting point
-        // 3500 cals = 1lb. Change in weight = deficit / 3500
+        // MATH: Calculate tomorrow's starting point
         const weightLost = def / 3500;
         const newWeight = w - weightLost;
         
-        // New BF% calculation: LBM stays same, Weight decreases
         const lbm = w * (1 - (cbf/100));
         const newBF = ((newWeight - lbm) / newWeight) * 100;
 
-        // 3. Update Inputs for tomorrow
         document.getElementById('cur-w').value = newWeight.toFixed(2);
         document.getElementById('cur-bf').value = newBF.toFixed(2);
 
         updateDisplay();
+        
+        // Auto-scroll history to the bottom to see newest entry
+        const box = document.getElementById('history-box');
+        box.scrollTop = box.scrollHeight;
     }
 
     function renderHistory() {
@@ -140,15 +149,16 @@
     }
 
     function clearData() {
-        if(confirm("Wipe all history?")) {
+        if(confirm("This will wipe your entire history. Proceed?")) {
             history = [];
-            localStorage.clear();
+            localStorage.removeItem('physique_logs_v2');
             updateDisplay();
         }
     }
 
-    // Initialize listeners
     document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateDisplay));
+    
+    // Initial Load
     updateDisplay();
 </script>
 
