@@ -9,24 +9,32 @@
         body { background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
         .container { width: 100%; max-width: 400px; }
         .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 15px; }
-        .stat-label { font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-        .main-val { font-size: 3rem; font-weight: 900; color: var(--accent); margin: 5px 0; display: block; }
-        .milestone { background: rgba(0, 209, 255, 0.1); color: var(--phase); border: 1px solid var(--phase); padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; text-align: center; margin-top: 10px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
+        .stat-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .main-val { font-size: 1.8rem; font-weight: 900; color: var(--accent); display: block; }
+        .milestone { background: rgba(0, 209, 255, 0.1); color: var(--phase); border: 1px solid var(--phase); padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; text-align: center; margin-top: 15px; }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
         label { font-size: 0.65rem; color: #555; text-transform: uppercase; }
         input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; }
         .commit-btn { width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 12px; font-weight: 900; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
-        .log-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
+        .log-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
         .log-header { background: #161616; color: #555; font-weight: bold; }
-        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card">
-            <div class="stat-label">Projected Goal Date</div>
-            <span class="main-val" id="eta-text">---</span>
+            <div class="stat-grid">
+                <div>
+                    <div class="stat-label">Days Remaining</div>
+                    <span class="main-val" id="days-text">--</span>
+                </div>
+                <div>
+                    <div class="stat-label">Projected Date</div>
+                    <span class="main-val" id="eta-text" style="color:white; font-size: 1.4rem; padding-top: 8px;">--</span>
+                </div>
+            </div>
             <div id="milestone-text" class="milestone">AWAITING INPUT</div>
         </div>
 
@@ -48,7 +56,7 @@
     </div>
 
 <script>
-    let logs = JSON.parse(localStorage.getItem('shred_logs_vFinal_Fixed')) || [];
+    let logs = JSON.parse(localStorage.getItem('shred_logs_final_v5')) || [];
     
     function update() {
         const w = parseFloat(document.getElementById('in-w').value);
@@ -63,22 +71,22 @@
         const targetW = lbm / (1 - goal);
         const lbsLeft = w - targetW;
 
-        // FIXED 500 DEFICIT LOGIC
-        // It calculates how many days from TODAY it would take at 500/day.
-        // If you hit 500, the date stays the same because you are 1 day closer, and the calculation 
-        // results in 1 day less.
+        // SEPARATE LOGIC:
+        // 1. Days Remaining (Countdown based on a 500/day pace)
         const daysRemaining = (lbsLeft * 3500) / 500;
+        document.getElementById('days-text').innerText = Math.ceil(daysRemaining);
+
+        // 2. Projected Date (Static if hitting 500, moves if over/under)
         const d = new Date();
         d.setDate(d.getDate() + daysRemaining);
-        
         document.getElementById('eta-text').innerText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
         const bfPct = bf * 100;
         const ms = document.getElementById('milestone-text');
-        if (bfPct > 18) ms.innerText = "Phase 1: Foundation";
-        else if (bfPct > 15) ms.innerText = "Phase 2: Definition";
-        else if (bfPct > 13) ms.innerText = "Phase 3: The Shred";
-        else ms.innerText = "Strike Zone";
+        if (bfPct > 18) ms.innerText = "PHASE 1: FOUNDATION";
+        else if (bfPct > 15) ms.innerText = "PHASE 2: DEFINITION";
+        else if (bfPct > 13) ms.innerText = "PHASE 3: SHREDDED";
+        else ms.innerText = "TARGET ZONE";
 
         render();
     }
@@ -96,9 +104,9 @@
             def: def
         });
 
-        localStorage.setItem('shred_logs_vFinal_Fixed', JSON.stringify(logs));
+        localStorage.setItem('shred_logs_final_v5', JSON.stringify(logs));
 
-        // Math for the next day's starting values
+        // Update values for tomorrow
         const lbsLost = def / 3500;
         const newW = w - lbsLost;
         const lbm = w * (1 - (bf/100));
@@ -111,7 +119,7 @@
 
     function deleteEntry(id) {
         logs = logs.filter(l => l.id !== id);
-        localStorage.setItem('shred_logs_vFinal_Fixed', JSON.stringify(logs));
+        localStorage.setItem('shred_logs_final_v5', JSON.stringify(logs));
         update();
     }
 
@@ -119,9 +127,7 @@
         document.getElementById('history-box').innerHTML = logs.map(l => `
             <div class="log-row">
                 <span>${l.date}</span><span>${l.w}</span><span>${l.bf}%</span>
-                <span style="color:${l.def >= 500 ? '#00ff96' : (l.def > 0 ? '#ffcc00' : '#ff4d4d')}">
-                    <span class="status-dot" style="background:${l.def >= 500 ? '#00ff96' : (l.def > 0 ? '#ffcc00' : '#ff4d4d')}"></span>${l.def}
-                </span>
+                <span style="color:${l.def >= 500 ? '#00ff96' : (l.def > 0 ? '#ffcc00' : '#ff4d4d')}">${l.def}</span>
                 <span style="cursor:pointer" onclick="deleteEntry(${l.id})">×</span>
             </div>
         `).join('');
