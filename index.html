@@ -19,13 +19,15 @@
         input:focus { border-color: var(--accent); outline: none; }
 
         .btn { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
-        .btn:active { background: #00cc78; }
-        .btn-clear { background: none; border: 1px solid #333; color: #555; margin-top: 10px; font-size: 0.7rem; }
+        .btn-clear { background: none; border: 1px solid #333; color: #555; margin-top: 10px; font-size: 0.7rem; width: 100%; cursor: pointer; border-radius: 8px; padding: 5px; }
 
-        .history-list { margin-top: 20px; width: 100%; background: #111; border-radius: 8px; overflow: hidden; }
-        .log-item { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #222; text-align: center; }
+        .history-list { margin-top: 20px; width: 100%; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid #222; }
+        .log-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #222; text-align: center; align-items: center; }
         .log-header { color: #666; font-weight: bold; background: #161616; border-bottom: 1px solid #333; }
         .log-scroll { max-height: 300px; overflow-y: auto; }
+        
+        .del-btn { color: #555; cursor: pointer; font-size: 1.2rem; font-weight: bold; transition: color 0.2s; }
+        .del-btn:hover { color: var(--danger); }
     </style>
 </head>
 <body>
@@ -34,13 +36,13 @@
         <div class="card">
             <div class="stat-header">Projected Goal Arrival</div>
             <span class="main-val" id="eta-display">---</span>
-            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Update weight/BF% to begin</div>
+            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Update metrics to project</div>
         </div>
 
         <div class="card">
             <div class="input-row" style="margin-top:0;">
                 <div>
-                    <label>Current Weight</label>
+                    <label>Weight (lbs)</label>
                     <input type="number" id="cur-w" value="195.00" step="0.01">
                 </div>
                 <div>
@@ -60,20 +62,19 @@
             </div>
             
             <button class="btn" onclick="commitDay()">Commit Today & Project</button>
-            <button class="btn btn-clear" onclick="clearData()">Clear All Data</button>
+            <button class="btn btn-clear" onclick="clearAllData()">Wipe All Data</button>
         </div>
 
         <div class="history-list">
             <div class="log-item log-header">
-                <span>Date</span><span>Lbs</span><span>BF%</span><span>Deficit</span>
+                <span>Date</span><span>Lbs</span><span>BF%</span><span>Def</span><span></span>
             </div>
             <div id="history-box" class="log-scroll"></div>
         </div>
     </div>
 
 <script>
-    // Persistent Storage
-    let history = JSON.parse(localStorage.getItem('physique_logs_v2')) || [];
+    let history = JSON.parse(localStorage.getItem('physique_logs_v3')) || [];
 
     function updateDisplay() {
         const w = parseFloat(document.getElementById('cur-w').value);
@@ -92,10 +93,10 @@
             const targetDate = new Date();
             targetDate.setDate(targetDate.getDate() + days);
             document.getElementById('eta-display').innerText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(2)} lbs of fat until goal`;
+            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(2)} lbs of fat to goal`;
         } else if (lbsLeft <= 0) {
-            document.getElementById('eta-display').innerText = "GOAL HIT";
-            document.getElementById('status-subtext').innerText = "Maintaining target physique";
+            document.getElementById('eta-display').innerText = "GOAL REACHED";
+            document.getElementById('status-subtext').innerText = "Target physique achieved";
         } else {
             document.getElementById('eta-display').innerText = "PAUSED";
             document.getElementById('status-subtext').innerText = "Surplus/Maintenance active";
@@ -109,20 +110,19 @@
         const def = parseFloat(document.getElementById('today-def').value);
         
         const entry = {
+            id: Date.now(), // Unique ID for individual deletion
             date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
             weight: w.toFixed(2),
             bf: cbf.toFixed(2),
             def: def
         };
         
-        // Push to end of array (Oldest at top, Newest at bottom)
         history.push(entry);
-        localStorage.setItem('physique_logs_v2', JSON.stringify(history));
+        saveAndSync();
 
-        // MATH: Calculate tomorrow's starting point
+        // Project for tomorrow
         const weightLost = def / 3500;
         const newWeight = w - weightLost;
-        
         const lbm = w * (1 - (cbf/100));
         const newBF = ((newWeight - lbm) / newWeight) * 100;
 
@@ -131,9 +131,20 @@
 
         updateDisplay();
         
-        // Auto-scroll history to the bottom to see newest entry
         const box = document.getElementById('history-box');
         box.scrollTop = box.scrollHeight;
+    }
+
+    function deleteEntry(id) {
+        if(confirm("Delete this entry?")) {
+            history = history.filter(item => item.id !== id);
+            saveAndSync();
+            updateDisplay();
+        }
+    }
+
+    function saveAndSync() {
+        localStorage.setItem('physique_logs_v3', JSON.stringify(history));
     }
 
     function renderHistory() {
@@ -144,21 +155,20 @@
                 <span>${item.weight}</span>
                 <span>${item.bf}%</span>
                 <span style="color:${item.def >= 0 ? 'var(--accent)' : 'var(--danger)'}">${item.def}</span>
+                <span class="del-btn" onclick="deleteEntry(${item.id})">×</span>
             </div>
         `).join('');
     }
 
-    function clearData() {
-        if(confirm("This will wipe your entire history. Proceed?")) {
+    function clearAllData() {
+        if(confirm("Wipe all history?")) {
             history = [];
-            localStorage.removeItem('physique_logs_v2');
+            localStorage.removeItem('physique_logs_v3');
             updateDisplay();
         }
     }
 
     document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateDisplay));
-    
-    // Initial Load
     updateDisplay();
 </script>
 
