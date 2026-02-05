@@ -17,7 +17,7 @@
         label { font-size: 0.65rem; color: #555; text-transform: uppercase; }
         input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; }
         .commit-btn { width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 12px; font-weight: 900; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
-        .log-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
+        .log-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
         .log-header { background: #161616; color: #555; font-weight: bold; }
     </style>
 </head>
@@ -31,11 +31,11 @@
                     <span class="main-val" id="days-text">--</span>
                 </div>
                 <div>
-                    <div class="stat-label">Projected Date</div>
-                    <span class="main-val" id="eta-text" style="color:white; font-size: 1.4rem; padding-top: 8px;">--</span>
+                    <div class="stat-label">Original Deadline</div>
+                    <span class="main-val" id="eta-text" style="color:white; font-size: 1.2rem; padding-top: 10px;">--</span>
                 </div>
             </div>
-            <div id="milestone-text" class="milestone">AWAITING INPUT</div>
+            <div id="milestone-text" class="milestone">AWAITING FIRST LOG</div>
         </div>
 
         <div class="card">
@@ -56,7 +56,7 @@
     </div>
 
 <script>
-    let logs = JSON.parse(localStorage.getItem('shred_logs_final_v5')) || [];
+    let logs = JSON.parse(localStorage.getItem('shred_logs_anchored')) || [];
     
     function update() {
         const w = parseFloat(document.getElementById('in-w').value);
@@ -71,15 +71,26 @@
         const targetW = lbm / (1 - goal);
         const lbsLeft = w - targetW;
 
-        // SEPARATE LOGIC:
-        // 1. Days Remaining (Countdown based on a 500/day pace)
+        // 1. Days Remaining (Current status)
         const daysRemaining = (lbsLeft * 3500) / 500;
         document.getElementById('days-text').innerText = Math.ceil(daysRemaining);
 
-        // 2. Projected Date (Static if hitting 500, moves if over/under)
-        const d = new Date();
-        d.setDate(d.getDate() + daysRemaining);
-        document.getElementById('eta-text').innerText = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        // 2. Original Deadline (Anchored to the FIRST entry)
+        if (logs.length > 0) {
+            const firstLog = logs[0];
+            const startW = parseFloat(firstLog.w);
+            const startBF = parseFloat(firstLog.bf) / 100;
+            const startLBM = startW * (1 - startBF);
+            const finalTargetW = startLBM / (1 - goal);
+            const totalLbsToLose = startW - finalTargetW;
+            const totalDaysRequired = (totalLbsToLose * 3500) / 500;
+
+            const deadline = new Date(firstLog.timestamp);
+            deadline.setDate(deadline.getDate() + totalDaysRequired);
+            document.getElementById('eta-text').innerText = deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        } else {
+            document.getElementById('eta-text').innerText = "TBD";
+        }
 
         const bfPct = bf * 100;
         const ms = document.getElementById('milestone-text');
@@ -98,15 +109,15 @@
 
         logs.push({
             id: Date.now(),
+            timestamp: new Date().getTime(),
             date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
             w: w.toFixed(2),
             bf: bf.toFixed(2),
             def: def
         });
 
-        localStorage.setItem('shred_logs_final_v5', JSON.stringify(logs));
+        localStorage.setItem('shred_logs_anchored', JSON.stringify(logs));
 
-        // Update values for tomorrow
         const lbsLost = def / 3500;
         const newW = w - lbsLost;
         const lbm = w * (1 - (bf/100));
@@ -119,7 +130,7 @@
 
     function deleteEntry(id) {
         logs = logs.filter(l => l.id !== id);
-        localStorage.setItem('shred_logs_final_v5', JSON.stringify(logs));
+        localStorage.setItem('shred_logs_anchored', JSON.stringify(logs));
         update();
     }
 
