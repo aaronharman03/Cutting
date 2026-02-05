@@ -1,78 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { background: #0a0a0a; color: white; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; padding: 40px; }
-        .dashboard { width: 350px; border: 1px solid #333; padding: 20px; border-radius: 8px; background: #111; }
+        :root { --main: #00ff96; --err: #ff4d4d; --bg: #050505; }
+        body { background: var(--bg); color: white; font-family: 'Monaco', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         
-        .metric-label { color: #888; font-size: 0.8rem; text-transform: uppercase; }
-        .metric-value { font-size: 2.5rem; color: #00ff96; margin-bottom: 20px; }
+        .card { width: 100%; max-width: 380px; border: 1px solid #222; padding: 25px; border-radius: 4px; background: #0a0a0a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        input { background: #222; border: 1px solid #444; color: #00ff96; padding: 10px; width: 100%; box-sizing: border-box; font-size: 1.2rem; margin-top: 5px; margin-bottom: 15px; }
+        .header { font-size: 0.7rem; color: #555; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px; }
+        .big-stat { font-size: 3.5rem; font-weight: bold; color: var(--main); margin-bottom: 20px; line-height: 1; }
         
-        .progress-container { width: 100%; height: 10px; background: #222; margin: 20px 0; border-radius: 5px; overflow: hidden; }
-        #bar { height: 100%; background: #00ff96; width: 0%; transition: 0.5s; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        input { width: 100%; background: #111; border: 1px solid #333; color: var(--main); padding: 12px; font-size: 1.2rem; outline: none; box-sizing: border-box; }
+        input:focus { border-color: var(--main); }
+
+        .progress-bar { width: 100%; height: 4px; background: #111; margin: 30px 0; position: relative; }
+        #fill { height: 100%; background: var(--main); width: 0%; transition: 1s cubic-bezier(0.075, 0.82, 0.165, 1); }
         
-        .binge-alert { color: #ff4d4d; border: 1px dashed #ff4d4d; padding: 10px; font-size: 0.9rem; display: none; }
+        .eta-box { border-top: 1px solid #222; padding-top: 20px; margin-top: 10px; }
+        #date-output { font-size: 1.4rem; color: #fff; display: block; margin-top: 5px; }
+
+        .binge-btn { margin-top: 25px; width: 100%; padding: 15px; background: none; border: 1px solid var(--err); color: var(--err); cursor: pointer; text-transform: uppercase; font-size: 0.8rem; font-weight: bold; }
+        .binge-btn:hover { background: var(--err); color: white; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <div class="metric-label">Lbs Remaining to 12%</div>
-    <div class="metric-value" id="lbs-display">15.0</div>
+<div class="card">
+    <div class="header">Fat Debt Remaining</div>
+    <div class="big-stat" id="lbs-left">15.0</div>
 
-    <div class="progress-container"><div id="bar"></div></div>
+    <div class="progress-bar"><div id="fill"></div></div>
 
-    <div class="metric-label">Current Weight (lbs)</div>
-    <input type="number" id="weight" value="195" oninput="update()">
-
-    <div class="metric-label">Daily Calorie Deficit</div>
-    <input type="number" id="deficit" value="500" oninput="update()">
-
-    <div class="metric-label">Days to Reach Goal</div>
-    <div class="metric-value" id="days-display" style="color: #555;">--</div>
-
-    <div id="binge-msg" class="binge-alert">
-        WARNING: Deficit is gone. You are currently adding fat.
+    <div class="input-group">
+        <label>Current Weight (lbs)</label>
+        <input type="number" id="weight" value="195" step="0.1" oninput="run()">
     </div>
+
+    <div class="input-group">
+        <label>Planned Daily Deficit</label>
+        <input type="number" id="deficit" value="500" step="50" oninput="run()">
+    </div>
+
+    <div class="eta-box">
+        <div class="header">Estimated 12% Arrival</div>
+        <span id="date-output">Calculating...</span>
+    </div>
+
+    <button class="binge-btn" onclick="addBinge()">Log Binge (+2,000 kcal)</button>
 </div>
 
 <script>
-    // Set your starting weight once here
-    const START_WEIGHT = 195; 
-    const GOAL_WEIGHT = 180; // (START_WEIGHT - 15)
+    // Configuration: You only change these once
+    let startWeight = 195; 
+    let goalWeight = startWeight - 15;
 
-    function update() {
+    function run() {
         const weight = parseFloat(document.getElementById('weight').value);
         const deficit = parseFloat(document.getElementById('deficit').value);
-        const lbsDisplay = document.getElementById('lbs-display');
-        const daysDisplay = document.getElementById('days-display');
-        const bar = document.getElementById('bar');
-        const bingeMsg = document.getElementById('binge-msg');
-
+        
         // 1. Calculate Lbs Left
-        const lbsLeft = weight - GOAL_WEIGHT;
-        lbsDisplay.innerText = lbsLeft > 0 ? lbsLeft.toFixed(1) : "0.0";
+        const lbsLeft = weight - goalWeight;
+        document.getElementById('lbs-left').innerText = lbsLeft.toFixed(1);
 
-        // 2. Progress Bar
+        // 2. Progress Logic
         let progress = ((15 - lbsLeft) / 15) * 100;
-        bar.style.width = Math.max(0, Math.min(100, progress)) + "%";
+        document.getElementById('fill').style.width = Math.max(0, Math.min(100, progress)) + "%";
 
-        // 3. Days to Goal (3500 calories = 1lb fat)
-        if (deficit > 0) {
-            bingeMsg.style.display = "none";
-            const days = (lbsLeft * 3500) / deficit;
-            daysDisplay.innerText = Math.ceil(days) + " Days";
-            daysDisplay.style.color = "#00ff96";
+        // 3. Date Logic
+        if (deficit > 0 && lbsLeft > 0) {
+            const daysToGoal = (lbsLeft * 3500) / deficit;
+            const arrivalDate = new Date();
+            arrivalDate.setDate(arrivalDate.getDate() + daysToGoal);
+            
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            document.getElementById('date-output').innerText = arrivalDate.toLocaleDateString('en-US', options);
+            document.getElementById('date-output').style.color = "white";
         } else {
-            // This is the Binge Logic
-            daysDisplay.innerText = "INFINITY";
-            daysDisplay.style.color = "#ff4d4d";
-            bingeMsg.style.display = "block";
+            document.getElementById('date-output').innerText = "DEADLINE HALTED";
+            document.getElementById('date-output').style.color = "#ff4d4d";
         }
     }
-    update();
+
+    function addBinge() {
+        // A 2000 calorie binge adds roughly 0.6 lbs to your weight
+        const weightInput = document.getElementById('weight');
+        const currentW = parseFloat(weightInput.value);
+        weightInput.value = (currentW + 0.6).toFixed(1);
+        
+        alert("Binge Logged. Your finish line just moved back by roughly 4-5 days.");
+        run();
+    }
+
+    run();
 </script>
 
 </body>
