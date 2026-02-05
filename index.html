@@ -3,98 +3,91 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        :root { --main: #00ff96; --err: #ff4d4d; --bg: #050505; }
-        body { background: var(--bg); color: white; font-family: 'Monaco', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { width: 100%; max-width: 350px; border: 1px solid #333; padding: 20px; border-radius: 12px; background: #0a0a0a; }
         
-        .card { width: 100%; max-width: 380px; border: 1px solid #222; padding: 25px; border-radius: 4px; background: #0a0a0a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-size: 2.5rem; font-weight: bold; color: #00ff96; margin-bottom: 20px; display: block; }
         
-        .header { font-size: 0.7rem; color: #555; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px; }
-        .big-stat { font-size: 3.5rem; font-weight: bold; color: var(--main); margin-bottom: 20px; line-height: 1; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #bbb; }
+        input { width: 100%; background: #111; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { border-color: #00ff96; outline: none; }
         
-        .input-group { margin-bottom: 20px; }
-        label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-        input { width: 100%; background: #111; border: 1px solid #333; color: var(--main); padding: 12px; font-size: 1.2rem; outline: none; box-sizing: border-box; }
-        input:focus { border-color: var(--main); }
-
-        .progress-bar { width: 100%; height: 4px; background: #111; margin: 30px 0; position: relative; }
-        #fill { height: 100%; background: var(--main); width: 0%; transition: 1s cubic-bezier(0.075, 0.82, 0.165, 1); }
-        
-        .eta-box { border-top: 1px solid #222; padding-top: 20px; margin-top: 10px; }
-        #date-output { font-size: 1.4rem; color: #fff; display: block; margin-top: 5px; }
-
-        .binge-btn { margin-top: 25px; width: 100%; padding: 15px; background: none; border: 1px solid var(--err); color: var(--err); cursor: pointer; text-transform: uppercase; font-size: 0.8rem; font-weight: bold; }
-        .binge-btn:hover { background: var(--err); color: white; }
+        .result-box { border-top: 1px solid #222; margin-top: 20px; padding-top: 20px; }
+        .date-highlight { font-size: 1.4rem; color: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="header">Fat Debt Remaining</div>
-    <div class="big-stat" id="lbs-left">15.0</div>
+    <div class="card">
+        <div class="stat-label">Estimated Current BF%</div>
+        <span class="stat-value" id="current-bf-display">--%</span>
 
-    <div class="progress-bar"><div id="fill"></div></div>
+        <div class="input-group">
+            <label>Current Weight (lbs)</label>
+            <input type="number" id="weight" value="195" oninput="calculate()">
+        </div>
 
-    <div class="input-group">
-        <label>Current Weight (lbs)</label>
-        <input type="number" id="weight" value="195" step="0.1" oninput="run()">
+        <div class="input-group">
+            <label>Starting BF% (Last Scan/Estimate)</label>
+            <input type="number" id="start-bf" value="20" oninput="calculate()">
+        </div>
+
+        <div class="input-group">
+            <label>Today's Deficit (e.g. 500) or Surplus (e.g. -500)</label>
+            <input type="number" id="daily-deficit" value="500" oninput="calculate()">
+        </div>
+
+        <div class="result-box">
+            <div class="stat-label">Predicted 12% Date</div>
+            <div class="date-highlight" id="goal-date">--</div>
+            
+            <div class="stat-label" style="margin-top: 15px;">Lbs of Fat Remaining</div>
+            <div id="fat-remaining" style="color: #00ff96; font-weight: bold;">-- lbs</div>
+        </div>
     </div>
-
-    <div class="input-group">
-        <label>Planned Daily Deficit</label>
-        <input type="number" id="deficit" value="500" step="50" oninput="run()">
-    </div>
-
-    <div class="eta-box">
-        <div class="header">Estimated 12% Arrival</div>
-        <span id="date-output">Calculating...</span>
-    </div>
-
-    <button class="binge-btn" onclick="addBinge()">Log Binge (+2,000 kcal)</button>
-</div>
 
 <script>
-    // Configuration: You only change these once
-    let startWeight = 195; 
-    let goalWeight = startWeight - 15;
-
-    function run() {
+    function calculate() {
+        // 1. Get Inputs
         const weight = parseFloat(document.getElementById('weight').value);
-        const deficit = parseFloat(document.getElementById('deficit').value);
+        const startBF = parseFloat(document.getElementById('start-bf').value) / 100;
+        const deficit = parseFloat(document.getElementById('daily-deficit').value);
         
-        // 1. Calculate Lbs Left
-        const lbsLeft = weight - goalWeight;
-        document.getElementById('lbs-left').innerText = lbsLeft.toFixed(1);
+        if (!weight || !startBF) return;
 
-        // 2. Progress Logic
-        let progress = ((15 - lbsLeft) / 15) * 100;
-        document.getElementById('fill').style.width = Math.max(0, Math.min(100, progress)) + "%";
+        // 2. Calculate Lean Body Mass (LBM)
+        const lbm = weight * (1 - startBF);
+        
+        // 3. Goal is 12% Body Fat (0.12)
+        // Goal Weight = LBM / (1 - 0.12)
+        const goalWeight = lbm / 0.88;
+        const lbsToLose = weight - goalWeight;
 
-        // 3. Date Logic
-        if (deficit > 0 && lbsLeft > 0) {
-            const daysToGoal = (lbsLeft * 3500) / deficit;
-            const arrivalDate = new Date();
-            arrivalDate.setDate(arrivalDate.getDate() + daysToGoal);
+        // 4. Update Displays
+        document.getElementById('current-bf-display').innerText = (startBF * 100).toFixed(1) + "%";
+        document.getElementById('fat-remaining').innerText = lbsToLose.toFixed(1) + " lbs";
+
+        // 5. Calculate Date (3500 calories = 1lb fat)
+        if (deficit > 0) {
+            const totalCalsNeeded = lbsToLose * 3500;
+            const daysRemaining = totalCalsNeeded / deficit;
             
-            const options = { month: 'short', day: 'numeric', year: 'numeric' };
-            document.getElementById('date-output').innerText = arrivalDate.toLocaleDateString('en-US', options);
-            document.getElementById('date-output').style.color = "white";
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + daysRemaining);
+            
+            const options = { month: 'long', day: 'numeric', year: 'numeric' };
+            document.getElementById('goal-date').innerText = targetDate.toLocaleDateString(undefined, options);
+            document.getElementById('goal-date').style.color = "#fff";
         } else {
-            document.getElementById('date-output').innerText = "DEADLINE HALTED";
-            document.getElementById('date-output').style.color = "#ff4d4d";
+            document.getElementById('goal-date').innerText = "NEVER (Surplus)";
+            document.getElementById('goal-date').style.color = "#ff4d4d";
         }
     }
 
-    function addBinge() {
-        // A 2000 calorie binge adds roughly 0.6 lbs to your weight
-        const weightInput = document.getElementById('weight');
-        const currentW = parseFloat(weightInput.value);
-        weightInput.value = (currentW + 0.6).toFixed(1);
-        
-        alert("Binge Logged. Your finish line just moved back by roughly 4-5 days.");
-        run();
-    }
-
-    run();
+    // Initialize
+    calculate();
 </script>
 
 </body>
