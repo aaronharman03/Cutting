@@ -3,175 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12% Vision Portal</title>
+    <title>12% Reveal Portal</title>
     <style>
-        :root {
-            --neon-green: #00ff96;
-            --warning-red: #ff4d4d;
-            --bg-dark: #0a0a0a;
-        }
+        :root { --neon: #00ff96; --bg: #0a0a0a; --card: #161616; }
+        body { background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
+        /* Setup Inputs */
+        .setup-zone { background: var(--card); padding: 15px; border-radius: 12px; width: 320px; margin-bottom: 20px; border: 1px solid #333; }
+        .setup-zone input { width: 60px; background: #222; border: 1px solid var(--neon); color: white; padding: 5px; border-radius: 4px; }
+        .input-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
 
-        body {
-            background-color: var(--bg-dark);
-            color: white;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
+        /* The Morph Frame */
+        .portal { position: relative; width: 320px; height: 400px; border-radius: 20px; overflow: hidden; border: 2px solid #333; }
+        .photo { position: absolute; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s ease; }
+        #goal-img { z-index: 1; }
+        #current-img { z-index: 2; }
 
-        h2 { margin-bottom: 10px; letter-spacing: 1px; text-transform: uppercase; }
-
-        /* The Visual Reveal System */
-        .portal-frame {
-            position: relative;
-            width: 320px;
-            height: 450px;
-            border: 2px solid #333;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 0 30px rgba(0, 255, 150, 0.1);
-        }
-
-        .photo {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        #goal-photo { z-index: 1; } /* 12% photo on bottom */
-        #current-photo { z-index: 2; border-bottom: 4px solid var(--neon-green); } /* 20% on top */
-
-        /* UI Elements */
-        .controls {
-            width: 320px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .stat-card {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 12px;
-            margin-top: 15px;
-            border: 1px solid #333;
-        }
-
-        .lbs-left {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--neon-green);
-            display: block;
-        }
-
-        input[type=range] {
-            width: 100%;
-            margin: 20px 0;
-            accent-color: var(--neon-green);
-        }
-
-        .binge-btn {
-            background: transparent;
-            border: 1px solid var(--warning-red);
-            color: var(--warning-red);
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
-            transition: all 0.3s;
-        }
-
-        .binge-btn:active {
-            background: var(--warning-red);
-            color: white;
-        }
-
-        #penalty-msg {
-            color: var(--warning-red);
-            font-size: 0.9rem;
-            margin-top: 10px;
-            display: none;
-            font-style: italic;
-        }
+        /* Results */
+        .stats { text-align: center; width: 320px; }
+        .big-number { font-size: 3.5rem; font-weight: 800; color: var(--neon); margin: 10px 0; display: block; }
+        input[type=range] { width: 100%; accent-color: var(--neon); margin: 20px 0; }
+        
+        .binge-btn { color: #ff4d4d; border: 1px solid #ff4d4d; background: none; padding: 10px; border-radius: 8px; width: 100%; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>The 12% Reveal</h2>
-
-    <div class="portal-frame">
-        <img id="goal-photo" class="photo" src="goal_12.jpg" alt="12 Percent Goal">
-        <img id="current-photo" class="photo" src="current_20.jpg" alt="Current 20 Percent">
-    </div>
-
-    <div class="controls">
-        <input type="range" id="bf-slider" min="12" max="20" step="0.1" value="20">
-        
-        <div class="stat-card">
-            <span id="bf-readout">Current: 20% Body Fat</span>
-            <span class="lbs-left" id="lbs-display">15.0 LBS</span>
-            <span id="eta-display">Approx. 75 days to goal</span>
-            <div id="penalty-msg">Binge Detected: +4 Days Added to Goal</div>
+    <div class="setup-zone">
+        <div class="input-row">
+            <span>Current Weight (lbs):</span>
+            <input type="number" id="w-input" value="190" oninput="calculateLBM()">
         </div>
-
-        <button class="binge-btn" onclick="triggerBinge()">I'M ABOUT TO BINGE</button>
+        <div class="input-row">
+            <span>Current BF (%):</span>
+            <input type="number" id="bf-input" value="20" oninput="calculateLBM()">
+        </div>
     </div>
 
-    <script>
-        const slider = document.getElementById('bf-slider');
-        const currentImg = document.getElementById('current-photo');
-        const lbsDisplay = document.getElementById('lbs-display');
-        const etaDisplay = document.getElementById('eta-display');
-        const bfReadout = document.getElementById('bf-readout');
-        const penaltyMsg = document.getElementById('penalty-msg');
+    <div class="portal">
+        <img id="goal-img" class="photo" src="goal_12.jpg">
+        <img id="current-img" class="photo" src="current_20.jpg">
+    </div>
 
-        // Logic (Personalize these numbers)
-        const MY_LBM = 156; // Your Lean Body Mass (Weight * (1 - 0.20))
-        const TARGET_BF = 0.12;
-        const TARGET_WEIGHT = MY_LBM / (1 - TARGET_BF);
+    <div class="stats">
+        <input type="range" id="slider" min="12" max="25" step="0.1" value="20">
+        <span id="label">Viewing: 20% BF</span>
+        <span class="big-number" id="gap-display">-- LBS</span>
+        <p id="eta-display">-- days to goal</p>
+        <button class="binge-btn" onclick="alert('Is 15 minutes of eating worth adding 4 days to your timeline?')">BINGE TRIGGER WARNING</button>
+    </div>
 
-        function update() {
-            const currentBF = parseFloat(slider.value);
-            
-            // 1. Visually fade the 20% photo
-            // Logic: 20% = 1.0 opacity, 12% = 0.0 opacity
-            const opacity = (currentBF - 12) / (20 - 12);
-            currentImg.style.opacity = opacity;
+<script>
+    let LBM = 0;
+    const TARGET_BF = 0.12;
 
-            // 2. Calculate LBS gap
-            const estimatedWeight = MY_LBM / (1 - (currentBF/100));
-            const gap = estimatedWeight - TARGET_WEIGHT;
-            
-            lbsDisplay.innerText = gap.toFixed(1) + " LBS TO GO";
-            bfReadout.innerText = "Current Status: " + currentBF + "%";
-            
-            // 3. ETA (Assuming 0.2lbs fat loss per day)
-            const days = Math.round(gap / 0.2);
-            etaDisplay.innerText = "Finish Line: Approx. " + days + " days";
-            
-            // Hide penalty message when adjusting
-            penaltyMsg.style.display = "none";
-        }
+    function calculateLBM() {
+        const w = parseFloat(document.getElementById('w-input').value);
+        const bf = parseFloat(document.getElementById('bf-input').value) / 100;
+        
+        // Calculate your core muscle/bone mass
+        LBM = w * (1 - bf);
+        
+        // Adjust slider max to your starting point
+        document.getElementById('slider').max = (bf * 100) + 5;
+        updateUI();
+    }
 
-        function triggerBinge() {
-            // Visual feedback of a binge
-            penaltyMsg.style.display = "block";
-            // Flash the screen red
-            document.body.style.backgroundColor = "#2a0000";
-            setTimeout(() => {
-                document.body.style.backgroundColor = "#0a0a0a";
-            }, 500);
-            
-            alert("Binge Logic: This will add ~3,000 calories, which is roughly 4 days of dieting. Look at the 12% photo again. Is it worth the delay?");
-        }
+    function updateUI() {
+        const currentViewBF = parseFloat(document.getElementById('slider').value);
+        const targetWeight = LBM / (1 - TARGET_BF);
+        
+        // Calculate current weight based on the slider position
+        const weightAtSlider = LBM / (1 - (currentViewBF / 100));
+        const gap = weightAtSlider - targetWeight;
 
-        slider.addEventListener('input', update);
-        update(); // Run on load
-    </script>
+        // Update Text
+        document.getElementById('label').innerText = `Viewing: ${currentViewBF}% BF`;
+        document.getElementById('gap-display').innerText = `${gap.toFixed(1)} LBS`;
+        document.getElementById('eta-display').innerText = `Estimated ${Math.round(gap / 0.2)} days of dieting left`;
+
+        // Update Image Fade (12% = transparent, Max BF = opaque)
+        const min = 12;
+        const max = parseFloat(document.getElementById('bf-input').value);
+        let opacity = (currentViewBF - min) / (max - min);
+        opacity = Math.max(0, Math.min(1, opacity)); // Clamp between 0 and 1
+        document.getElementById('current-img').style.opacity = opacity;
+    }
+
+    document.getElementById('slider').oninput = updateUI;
+    
+    // Initialize
+    calculateLBM();
+</script>
 </body>
 </html>
