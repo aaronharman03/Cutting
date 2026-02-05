@@ -11,13 +11,13 @@
         .card { background: var(--card); padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 15px; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
         .stat-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .main-val { font-size: 1.8rem; font-weight: 900; color: var(--accent); display: block; }
+        .main-val { font-size: 1.6rem; font-weight: 900; color: var(--accent); display: block; }
         .milestone { background: rgba(0, 209, 255, 0.1); color: var(--phase); border: 1px solid var(--phase); padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; text-align: center; margin-top: 15px; }
         .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
         label { font-size: 0.65rem; color: #555; text-transform: uppercase; }
         input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; }
         .commit-btn { width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 12px; font-weight: 900; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
-        .log-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; font-size: 0.8rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
+        .log-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 0.5fr; font-size: 0.75rem; padding: 12px 5px; border-bottom: 1px solid #1a1a1a; text-align: center; align-items: center; }
         .log-header { background: #161616; color: #555; font-weight: bold; }
     </style>
 </head>
@@ -32,21 +32,33 @@
                 </div>
                 <div>
                     <div class="stat-label">Original Deadline</div>
-                    <span class="main-val" id="eta-text" style="color:white; font-size: 1.2rem; padding-top: 10px;">--</span>
+                    <span class="main-val" id="eta-text" style="color:white;">--</span>
                 </div>
             </div>
-            <div id="milestone-text" class="milestone">AWAITING FIRST LOG</div>
+            <div id="milestone-text" class="milestone">PHASE 1: INITIALIZING</div>
         </div>
 
         <div class="card">
-            <div class="stat-label" style="color:var(--phase)">Lean Mass: <span id="lbm-display">0.00</span> lbs</div>
+            <div class="stat-label" style="color:var(--phase)">Lean Body Mass: <span id="lbm-display">0.00</span> lbs</div>
             <div class="input-grid">
-                <div><label>Weight</label><input type="number" id="in-w" value="195.00" step="0.01"></div>
-                <div><label>Current BF%</label><input type="number" id="in-bf" value="20.00" step="0.01"></div>
-                <div><label>Goal BF%</label><input type="number" id="in-goal" value="12.00" step="0.1"></div>
-                <div><label>Today's Deficit</label><input type="number" id="in-def" value="500"></div>
+                <div>
+                    <label>Weight</label>
+                    <input type="number" id="in-w" value="195.00" step="0.01" oninput="linkInputs('weight')">
+                </div>
+                <div>
+                    <label>BF %</label>
+                    <input type="number" id="in-bf" value="20.00" step="0.01" oninput="linkInputs('bf')">
+                </div>
+                <div>
+                    <label>Goal BF %</label>
+                    <input type="number" id="in-goal" value="12.00" step="0.1" oninput="updateDashboard()">
+                </div>
+                <div>
+                    <label>Deficit</label>
+                    <input type="number" id="in-def" value="500" oninput="updateDashboard()">
+                </div>
             </div>
-            <button class="commit-btn" onclick="commitEntry()">Commit Day</button>
+            <button class="commit-btn" onclick="commitEntry()">Commit Today</button>
         </div>
 
         <div style="width: 100%; background: #0a0a0a; border-radius: 12px; border: 1px solid #222; overflow: hidden;">
@@ -56,47 +68,66 @@
     </div>
 
 <script>
-    let logs = JSON.parse(localStorage.getItem('shred_logs_anchored')) || [];
-    
-    function update() {
+    let logs = JSON.parse(localStorage.getItem('shred_logs_linked_v1')) || [];
+    let lockedLBM = 0;
+
+    // Link Weight and BF% based on LBM
+    function linkInputs(source) {
+        const wInput = document.getElementById('in-w');
+        const bfInput = document.getElementById('in-bf');
+        
+        // If we have history, we use that LBM. Otherwise, we calculate a new one.
+        let lbm = (logs.length > 0) ? (parseFloat(logs[0].w) * (1 - (parseFloat(logs[0].bf)/100))) : (parseFloat(wInput.value) * (1 - (parseFloat(bfInput.value)/100)));
+        lockedLBM = lbm;
+        document.getElementById('lbm-display').innerText = lbm.toFixed(2);
+
+        if (source === 'weight') {
+            // New BF% = (Weight - LBM) / Weight
+            let weight = parseFloat(wInput.value);
+            if (weight > lbm) {
+                let newBF = ((weight - lbm) / weight) * 100;
+                bfInput.value = newBF.toFixed(2);
+            }
+        } else if (source === 'bf') {
+            // New Weight = LBM / (1 - BF%)
+            let bf = parseFloat(bfInput.value) / 100;
+            if (bf < 1) {
+                let newWeight = lbm / (1 - bf);
+                wInput.value = newWeight.toFixed(2);
+            }
+        }
+        updateDashboard();
+    }
+
+    function updateDashboard() {
         const w = parseFloat(document.getElementById('in-w').value);
         const bf = parseFloat(document.getElementById('in-bf').value) / 100;
         const goal = parseFloat(document.getElementById('in-goal').value) / 100;
         
-        if (!w || !bf || !goal) return;
-
         const lbm = w * (1 - bf);
-        document.getElementById('lbm-display').innerText = lbm.toFixed(2);
-        
         const targetW = lbm / (1 - goal);
         const lbsLeft = w - targetW;
 
-        // 1. Days Remaining (Current status)
+        // 1. Days Remaining at 500 pace
         const daysRemaining = (lbsLeft * 3500) / 500;
-        document.getElementById('days-text').innerText = Math.ceil(daysRemaining);
+        document.getElementById('days-text').innerText = Math.max(0, Math.ceil(daysRemaining));
 
-        // 2. Original Deadline (Anchored to the FIRST entry)
+        // 2. Original Deadline (Anchored to Entry #1)
         if (logs.length > 0) {
-            const firstLog = logs[0];
-            const startW = parseFloat(firstLog.w);
-            const startBF = parseFloat(firstLog.bf) / 100;
-            const startLBM = startW * (1 - startBF);
-            const finalTargetW = startLBM / (1 - goal);
-            const totalLbsToLose = startW - finalTargetW;
-            const totalDaysRequired = (totalLbsToLose * 3500) / 500;
-
-            const deadline = new Date(firstLog.timestamp);
-            deadline.setDate(deadline.getDate() + totalDaysRequired);
+            const f = logs[0];
+            const fLBM = parseFloat(f.w) * (1 - (parseFloat(f.bf)/100));
+            const fTargetW = fLBM / (1 - goal);
+            const totalDays = ((parseFloat(f.w) - fTargetW) * 3500) / 500;
+            const deadline = new Date(f.timestamp);
+            deadline.setDate(deadline.getDate() + totalDays);
             document.getElementById('eta-text').innerText = deadline.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        } else {
-            document.getElementById('eta-text').innerText = "TBD";
         }
 
-        const bfPct = bf * 100;
         const ms = document.getElementById('milestone-text');
-        if (bfPct > 18) ms.innerText = "PHASE 1: FOUNDATION";
-        else if (bfPct > 15) ms.innerText = "PHASE 2: DEFINITION";
-        else if (bfPct > 13) ms.innerText = "PHASE 3: SHREDDED";
+        const bfP = bf * 100;
+        if (bfP > 18) ms.innerText = "PHASE 1: THE START";
+        else if (bfP > 15) ms.innerText = "PHASE 2: DEFINITION";
+        else if (bfP > 13) ms.innerText = "PHASE 3: SHREDDED";
         else ms.innerText = "TARGET ZONE";
 
         render();
@@ -111,27 +142,22 @@
             id: Date.now(),
             timestamp: new Date().getTime(),
             date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
-            w: w.toFixed(2),
-            bf: bf.toFixed(2),
-            def: def
+            w: w.toFixed(2), bf: bf.toFixed(2), def: def
         });
 
-        localStorage.setItem('shred_logs_anchored', JSON.stringify(logs));
+        localStorage.setItem('shred_logs_linked_v1', JSON.stringify(logs));
 
+        // Move to tomorrow
         const lbsLost = def / 3500;
-        const newW = w - lbsLost;
-        const lbm = w * (1 - (bf/100));
-        const newBF = ((newW - lbm) / newW) * 100;
-
-        document.getElementById('in-w').value = newW.toFixed(2);
-        document.getElementById('in-bf').value = newBF.toFixed(2);
-        update();
+        const newWeight = w - lbsLost;
+        document.getElementById('in-w').value = newWeight.toFixed(2);
+        linkInputs('weight'); // This automatically updates BF% for the new weight
     }
 
     function deleteEntry(id) {
         logs = logs.filter(l => l.id !== id);
-        localStorage.setItem('shred_logs_anchored', JSON.stringify(logs));
-        update();
+        localStorage.setItem('shred_logs_linked_v1', JSON.stringify(logs));
+        linkInputs('weight');
     }
 
     function render() {
@@ -144,8 +170,8 @@
         `).join('');
     }
 
-    document.querySelectorAll('input').forEach(i => i.addEventListener('input', update));
-    update();
+    // Initialize
+    linkInputs('weight');
 </script>
 </body>
 </html>
