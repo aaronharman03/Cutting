@@ -1,132 +1,155 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physique Projector</title>
     <style>
-        :root { --accent: #00ff96; --bg: #0a0a0a; --panel: #161616; }
-        body { background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
-        .card { width: 100%; max-width: 400px; background: var(--panel); padding: 20px; border-radius: 12px; box-sizing: border-box; border: 1px solid #333; }
+        :root { --accent: #00ff96; --bg: #0b0b0b; --card: #1a1a1a; --danger: #ff4d4d; }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 400px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
         
-        h2 { margin: 0 0 20px 0; font-size: 1.2rem; text-transform: uppercase; color: var(--accent); letter-spacing: 1px; }
-        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 5px; }
-        input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .stat-header { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .main-val { font-size: 2.8rem; font-weight: 800; color: var(--accent); margin-bottom: 5px; display: block; }
+        
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        label { display: block; font-size: 0.7rem; color: #666; margin-bottom: 4px; }
+        input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1.1rem; }
         input:focus { border-color: var(--accent); outline: none; }
 
-        .summary { background: #000; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border-left: 4px solid var(--accent); }
-        .date-val { font-size: 1.2rem; font-weight: bold; display: block; margin-top: 5px; }
+        .btn { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; text-transform: uppercase; }
+        .btn-clear { background: none; border: 1px solid #333; color: #555; margin-top: 10px; font-size: 0.7rem; }
 
-        .btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
-        .btn:active { transform: scale(0.98); }
-
-        .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .history-table th { text-align: left; color: #666; border-bottom: 1px solid #333; padding: 8px 0; }
-        .history-table td { padding: 10px 0; border-bottom: 1px solid #222; }
-        .pos-def { color: var(--accent); }
-        .neg-def { color: #ff4d4d; }
+        .history-list { margin-top: 20px; width: 100%; }
+        .log-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; font-size: 0.8rem; padding: 10px 0; border-bottom: 1px solid #222; text-align: center; }
+        .log-header { color: #555; font-weight: bold; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>Target Tracker</h2>
-        
-        <div class="input-grid">
-            <div>
-                <label>Weight (lbs)</label>
-                <input type="number" id="w" value="195" step="0.1">
-            </div>
-            <div>
-                <label>Current BF %</label>
-                <input type="number" id="c-bf" value="20" step="0.1">
-            </div>
-            <div>
-                <label>Goal BF %</label>
-                <input type="number" id="g-bf" value="12" step="0.1">
-            </div>
-            <div>
-                <label>Today's Deficit</label>
-                <input type="number" id="def" value="500">
-            </div>
+    <div class="container">
+        <div class="card">
+            <div class="stat-header">Projected Goal Date</div>
+            <span class="main-val" id="eta-display">---</span>
+            <div id="status-subtext" style="font-size: 0.9rem; color: #bbb;">Set your parameters below</div>
         </div>
 
-        <div class="summary">
-            <span style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Predicted Goal Date</span>
-            <span id="date-out" class="date-val">---</span>
+        <div class="card">
+            <div class="input-row" style="margin-top:0;">
+                <div>
+                    <label>Current Weight</label>
+                    <input type="number" id="cur-w" value="195.0" step="0.1">
+                </div>
+                <div>
+                    <label>Current BF%</label>
+                    <input type="number" id="cur-bf" value="20.0" step="0.1">
+                </div>
+            </div>
+            <div class="input-row">
+                <div>
+                    <label>Goal BF%</label>
+                    <input type="number" id="goal-bf" value="12.0" step="0.1">
+                </div>
+                <div>
+                    <label>Today's Deficit</label>
+                    <input type="number" id="today-def" value="500">
+                </div>
+            </div>
+            
+            <button class="btn" onclick="commitDay()">Commit Today & Project</button>
+            <button class="btn btn-clear" onclick="clearData()">Clear History</button>
         </div>
 
-        <button class="btn" onclick="saveEntry()">SAVE TODAY'S LOG</button>
-
-        <h2 style="font-size: 0.9rem; color: #666;">History</h2>
-        <table class="history-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Weight</th>
-                    <th>BF%</th>
-                    <th>Deficit</th>
-                </tr>
-            </thead>
-            <tbody id="history-body">
-                </tbody>
-        </table>
+        <div class="history-list">
+            <div class="log-item log-header">
+                <span>Date</span><span>Weight</span><span>BF%</span><span>Deficit</span>
+            </div>
+            <div id="history-box"></div>
+        </div>
     </div>
 
 <script>
-    function calculateDate() {
-        const w = parseFloat(document.getElementById('w').value);
-        const cbf = parseFloat(document.getElementById('c-bf').value) / 100;
-        const gbf = parseFloat(document.getElementById('g-bf').value) / 100;
-        const deficit = parseFloat(document.getElementById('def').value);
+    // Load data from LocalStorage on start
+    let history = JSON.parse(localStorage.getItem('physique_logs')) || [];
 
-        if (!w || !cbf || !gbf) return;
+    function updateDisplay() {
+        const w = parseFloat(document.getElementById('cur-w').value);
+        const cbf = parseFloat(document.getElementById('cur-bf').value) / 100;
+        const gbf = parseFloat(document.getElementById('goal-bf').value) / 100;
+        const def = parseFloat(document.getElementById('today-def').value);
 
         const lbm = w * (1 - cbf);
         const targetW = lbm / (1 - gbf);
-        const lbsToGo = w - targetW;
+        const lbsLeft = w - targetW;
 
-        const dateOut = document.getElementById('date-out');
-        
-        if (deficit > 0 && lbsToGo > 0) {
-            const days = (lbsToGo * 3500) / deficit;
-            const goalDate = new Date();
-            goalDate.setDate(goalDate.getDate() + days);
-            dateOut.innerText = goalDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            dateOut.style.color = "white";
-        } else if (lbsToGo <= 0) {
-            dateOut.innerText = "GOAL REACHED";
-            dateOut.style.color = "var(--accent)";
+        if (def > 0 && lbsLeft > 0) {
+            const days = (lbsLeft * 3500) / def;
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + days);
+            document.getElementById('eta-display').innerText = targetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            document.getElementById('status-subtext').innerText = `${lbsLeft.toFixed(1)} lbs of fat to burn`;
         } else {
-            dateOut.innerText = "NEVER (Surplus)";
-            dateOut.style.color = "#ff4d4d";
+            document.getElementById('eta-display').innerText = "STALLED";
+            document.getElementById('status-subtext').innerText = "Adjust deficit to resume projection";
+        }
+        renderHistory();
+    }
+
+    function commitDay() {
+        const w = parseFloat(document.getElementById('cur-w').value);
+        const cbf = parseFloat(document.getElementById('cur-bf').value);
+        const def = parseFloat(document.getElementById('today-def').value);
+        
+        // 1. Log today's state
+        const entry = {
+            date: new Date().toLocaleDateString(undefined, {month:'2-digit', day:'2-digit'}),
+            weight: w.toFixed(1),
+            bf: cbf.toFixed(1),
+            def: def
+        };
+        history.unshift(entry);
+        localStorage.setItem('physique_logs', JSON.stringify(history));
+
+        // 2. MATH: Calculate tomorrow's projected starting point
+        // 3500 cals = 1lb. Change in weight = deficit / 3500
+        const weightLost = def / 3500;
+        const newWeight = w - weightLost;
+        
+        // New BF% calculation: LBM stays same, Weight decreases
+        const lbm = w * (1 - (cbf/100));
+        const newBF = ((newWeight - lbm) / newWeight) * 100;
+
+        // 3. Update Inputs for tomorrow
+        document.getElementById('cur-w').value = newWeight.toFixed(2);
+        document.getElementById('cur-bf').value = newBF.toFixed(2);
+
+        updateDisplay();
+    }
+
+    function renderHistory() {
+        const box = document.getElementById('history-box');
+        box.innerHTML = history.map(item => `
+            <div class="log-item">
+                <span>${item.date}</span>
+                <span>${item.weight}</span>
+                <span>${item.bf}%</span>
+                <span style="color:${item.def >= 0 ? 'var(--accent)' : 'var(--danger)'}">${item.def}</span>
+            </div>
+        `).join('');
+    }
+
+    function clearData() {
+        if(confirm("Wipe all history?")) {
+            history = [];
+            localStorage.clear();
+            updateDisplay();
         }
     }
 
-    function saveEntry() {
-        const date = new Date().toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' });
-        const weight = document.getElementById('w').value;
-        const bf = document.getElementById('c-bf').value;
-        const deficit = document.getElementById('def').value;
-        
-        const table = document.getElementById('history-body');
-        const row = table.insertRow(0);
-        
-        const defClass = deficit >= 0 ? 'pos-def' : 'neg-def';
-        
-        row.innerHTML = `
-            <td>${date}</td>
-            <td>${weight}</td>
-            <td>${bf}%</td>
-            <td class="${defClass}">${deficit}</td>
-        `;
-    }
-
-    // Auto-calculate on any input change
-    document.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', calculateDate);
-    });
-
-    calculateDate();
+    // Initialize listeners
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateDisplay));
+    updateDisplay();
 </script>
 
 </body>
