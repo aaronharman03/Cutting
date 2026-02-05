@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12% Vision Portal</title>
+    <style>
+        :root {
+            --neon-green: #00ff96;
+            --warning-red: #ff4d4d;
+            --bg-dark: #0a0a0a;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h2 { margin-bottom: 10px; letter-spacing: 1px; text-transform: uppercase; }
+
+        /* The Visual Reveal System */
+        .portal-frame {
+            position: relative;
+            width: 320px;
+            height: 450px;
+            border: 2px solid #333;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 150, 0.1);
+        }
+
+        .photo {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #goal-photo { z-index: 1; } /* 12% photo on bottom */
+        #current-photo { z-index: 2; border-bottom: 4px solid var(--neon-green); } /* 20% on top */
+
+        /* UI Elements */
+        .controls {
+            width: 320px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            border: 1px solid #333;
+        }
+
+        .lbs-left {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--neon-green);
+            display: block;
+        }
+
+        input[type=range] {
+            width: 100%;
+            margin: 20px 0;
+            accent-color: var(--neon-green);
+        }
+
+        .binge-btn {
+            background: transparent;
+            border: 1px solid var(--warning-red);
+            color: var(--warning-red);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .binge-btn:active {
+            background: var(--warning-red);
+            color: white;
+        }
+
+        #penalty-msg {
+            color: var(--warning-red);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: none;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>The 12% Reveal</h2>
+
+    <div class="portal-frame">
+        <img id="goal-photo" class="photo" src="goal_12.jpg" alt="12 Percent Goal">
+        <img id="current-photo" class="photo" src="current_20.jpg" alt="Current 20 Percent">
+    </div>
+
+    <div class="controls">
+        <input type="range" id="bf-slider" min="12" max="20" step="0.1" value="20">
+        
+        <div class="stat-card">
+            <span id="bf-readout">Current: 20% Body Fat</span>
+            <span class="lbs-left" id="lbs-display">15.0 LBS</span>
+            <span id="eta-display">Approx. 75 days to goal</span>
+            <div id="penalty-msg">Binge Detected: +4 Days Added to Goal</div>
+        </div>
+
+        <button class="binge-btn" onclick="triggerBinge()">I'M ABOUT TO BINGE</button>
+    </div>
+
+    <script>
+        const slider = document.getElementById('bf-slider');
+        const currentImg = document.getElementById('current-photo');
+        const lbsDisplay = document.getElementById('lbs-display');
+        const etaDisplay = document.getElementById('eta-display');
+        const bfReadout = document.getElementById('bf-readout');
+        const penaltyMsg = document.getElementById('penalty-msg');
+
+        // Logic (Personalize these numbers)
+        const MY_LBM = 156; // Your Lean Body Mass (Weight * (1 - 0.20))
+        const TARGET_BF = 0.12;
+        const TARGET_WEIGHT = MY_LBM / (1 - TARGET_BF);
+
+        function update() {
+            const currentBF = parseFloat(slider.value);
+            
+            // 1. Visually fade the 20% photo
+            // Logic: 20% = 1.0 opacity, 12% = 0.0 opacity
+            const opacity = (currentBF - 12) / (20 - 12);
+            currentImg.style.opacity = opacity;
+
+            // 2. Calculate LBS gap
+            const estimatedWeight = MY_LBM / (1 - (currentBF/100));
+            const gap = estimatedWeight - TARGET_WEIGHT;
+            
+            lbsDisplay.innerText = gap.toFixed(1) + " LBS TO GO";
+            bfReadout.innerText = "Current Status: " + currentBF + "%";
+            
+            // 3. ETA (Assuming 0.2lbs fat loss per day)
+            const days = Math.round(gap / 0.2);
+            etaDisplay.innerText = "Finish Line: Approx. " + days + " days";
+            
+            // Hide penalty message when adjusting
+            penaltyMsg.style.display = "none";
+        }
+
+        function triggerBinge() {
+            // Visual feedback of a binge
+            penaltyMsg.style.display = "block";
+            // Flash the screen red
+            document.body.style.backgroundColor = "#2a0000";
+            setTimeout(() => {
+                document.body.style.backgroundColor = "#0a0a0a";
+            }, 500);
+            
+            alert("Binge Logic: This will add ~3,000 calories, which is roughly 4 days of dieting. Look at the 12% photo again. Is it worth the delay?");
+        }
+
+        slider.addEventListener('input', update);
+        update(); // Run on load
+    </script>
+</body>
+</html>
