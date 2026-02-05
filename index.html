@@ -2,73 +2,75 @@
 <html>
 <head>
     <style>
-        body { background: #0e0e0e; color: #fff; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
-        .container { width: 350px; text-align: center; }
+        body { background: #0a0a0a; color: white; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        .dashboard { width: 350px; border: 1px solid #333; padding: 20px; border-radius: 8px; background: #111; }
         
-        /* The Progress Track */
-        .track { width: 100%; height: 12px; background: #222; border-radius: 10px; margin: 40px 0; position: relative; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #004d30, #00ff96); border-radius: 10px; transition: width 0.5s ease; }
+        .metric-label { color: #888; font-size: 0.8rem; text-transform: uppercase; }
+        .metric-value { font-size: 2.5rem; color: #00ff96; margin-bottom: 20px; }
         
-        /* The Marker */
-        .marker { position: absolute; top: -30px; transform: translateX(-50%); font-weight: bold; color: #00ff96; }
-
-        .lbs-display { font-size: 4rem; font-weight: 900; margin: 0; color: #fff; }
-        .sub-text { color: #666; text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; }
+        input { background: #222; border: 1px solid #444; color: #00ff96; padding: 10px; width: 100%; box-sizing: border-box; font-size: 1.2rem; margin-top: 5px; margin-bottom: 15px; }
         
-        input { background: #1a1a1a; border: 1px solid #333; color: #00ff96; font-size: 1.5rem; padding: 10px; width: 120px; border-radius: 8px; text-align: center; margin-top: 20px; }
+        .progress-container { width: 100%; height: 10px; background: #222; margin: 20px 0; border-radius: 5px; overflow: hidden; }
+        #bar { height: 100%; background: #00ff96; width: 0%; transition: 0.5s; }
         
-        .penalty-box { margin-top: 30px; padding: 15px; border-radius: 8px; border: 1px border-style: dashed; border-color: #333; color: #ff4d4d; display: none; }
+        .binge-alert { color: #ff4d4d; border: 1px dashed #ff4d4d; padding: 10px; font-size: 0.9rem; display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <p class="sub-text">Distance to 12%</p>
-    <h1 class="lbs-display" id="lbs-text">15.0</h1>
-    <p class="sub-text">Pounds Remaining</p>
+<div class="dashboard">
+    <div class="metric-label">Lbs Remaining to 12%</div>
+    <div class="metric-value" id="lbs-display">15.0</div>
 
-    <div class="track">
-        <div id="fill" class="progress-fill" style="width: 0%;"></div>
-        <div id="marker" class="marker" style="left: 0%;">YOU</div>
-    </div>
+    <div class="progress-container"><div id="bar"></div></div>
 
-    <input type="number" id="input" value="15" step="0.5" oninput="update()">
-    
-    <p id="eta" style="color: #888; margin-top: 20px;">ETA: -- days</p>
+    <div class="metric-label">Current Weight (lbs)</div>
+    <input type="number" id="weight" value="195" oninput="update()">
 
-    <div id="binge-warning" class="penalty-box">
-        ⚠️ Binge added <b>+4 days</b> to your finish line.
+    <div class="metric-label">Daily Calorie Deficit</div>
+    <input type="number" id="deficit" value="500" oninput="update()">
+
+    <div class="metric-label">Days to Reach Goal</div>
+    <div class="metric-value" id="days-display" style="color: #555;">--</div>
+
+    <div id="binge-msg" class="binge-alert">
+        WARNING: Deficit is gone. You are currently adding fat.
     </div>
 </div>
 
 <script>
+    // Set your starting weight once here
+    const START_WEIGHT = 195; 
+    const GOAL_WEIGHT = 180; // (START_WEIGHT - 15)
+
     function update() {
-        const lbsLeft = parseFloat(document.getElementById('input').value);
-        const fill = document.getElementById('fill');
-        const marker = document.getElementById('marker');
-        const lbsText = document.getElementById('lbs-text');
-        const eta = document.getElementById('eta');
-        const warning = document.getElementById('binge-warning');
+        const weight = parseFloat(document.getElementById('weight').value);
+        const deficit = parseFloat(document.getElementById('deficit').value);
+        const lbsDisplay = document.getElementById('lbs-display');
+        const daysDisplay = document.getElementById('days-display');
+        const bar = document.getElementById('bar');
+        const bingeMsg = document.getElementById('binge-msg');
 
-        // Logic: 15lbs is the start (0% progress), 0lbs is the finish (100% progress)
+        // 1. Calculate Lbs Left
+        const lbsLeft = weight - GOAL_WEIGHT;
+        lbsDisplay.innerText = lbsLeft > 0 ? lbsLeft.toFixed(1) : "0.0";
+
+        // 2. Progress Bar
         let progress = ((15 - lbsLeft) / 15) * 100;
-        progress = Math.max(0, Math.min(100, progress)); // Keep between 0-100
+        bar.style.width = Math.max(0, Math.min(100, progress)) + "%";
 
-        fill.style.width = progress + "%";
-        marker.style.left = progress + "%";
-        lbsText.innerText = lbsLeft.toFixed(1);
-
-        // ETA calculation (assuming 0.2lbs fat loss/day)
-        const days = Math.round(lbsLeft / 0.2);
-        eta.innerText = `Finish Line: Approx. ${days} days`;
-
-        // Show warning if user manually increases the weight (binge indicator)
-        if (window.lastVal && lbsLeft > window.lastVal) {
-            warning.style.display = "block";
+        // 3. Days to Goal (3500 calories = 1lb fat)
+        if (deficit > 0) {
+            bingeMsg.style.display = "none";
+            const days = (lbsLeft * 3500) / deficit;
+            daysDisplay.innerText = Math.ceil(days) + " Days";
+            daysDisplay.style.color = "#00ff96";
         } else {
-            warning.style.display = "none";
+            // This is the Binge Logic
+            daysDisplay.innerText = "INFINITY";
+            daysDisplay.style.color = "#ff4d4d";
+            bingeMsg.style.display = "block";
         }
-        window.lastVal = lbsLeft;
     }
     update();
 </script>
