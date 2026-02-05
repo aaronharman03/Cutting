@@ -3,91 +3,130 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { width: 100%; max-width: 350px; border: 1px solid #333; padding: 20px; border-radius: 12px; background: #0a0a0a; }
+        :root { --accent: #00ff96; --bg: #0a0a0a; --panel: #161616; }
+        body { background: var(--bg); color: white; font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
+        .card { width: 100%; max-width: 400px; background: var(--panel); padding: 20px; border-radius: 12px; box-sizing: border-box; border: 1px solid #333; }
         
-        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 2.5rem; font-weight: bold; color: #00ff96; margin-bottom: 20px; display: block; }
-        
-        .input-group { margin-bottom: 15px; text-align: left; }
-        label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #bbb; }
-        input { width: 100%; background: #111; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        input:focus { border-color: #00ff96; outline: none; }
-        
-        .result-box { border-top: 1px solid #222; margin-top: 20px; padding-top: 20px; }
-        .date-highlight { font-size: 1.4rem; color: #fff; font-weight: bold; }
+        h2 { margin: 0 0 20px 0; font-size: 1.2rem; text-transform: uppercase; color: var(--accent); letter-spacing: 1px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 5px; }
+        input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        .summary { background: #000; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border-left: 4px solid var(--accent); }
+        .date-val { font-size: 1.2rem; font-weight: bold; display: block; margin-top: 5px; }
+
+        .btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+        .btn:active { transform: scale(0.98); }
+
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .history-table th { text-align: left; color: #666; border-bottom: 1px solid #333; padding: 8px 0; }
+        .history-table td { padding: 10px 0; border-bottom: 1px solid #222; }
+        .pos-def { color: var(--accent); }
+        .neg-def { color: #ff4d4d; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <div class="stat-label">Estimated Current BF%</div>
-        <span class="stat-value" id="current-bf-display">--%</span>
-
-        <div class="input-group">
-            <label>Current Weight (lbs)</label>
-            <input type="number" id="weight" value="195" oninput="calculate()">
+        <h2>Target Tracker</h2>
+        
+        <div class="input-grid">
+            <div>
+                <label>Weight (lbs)</label>
+                <input type="number" id="w" value="195" step="0.1">
+            </div>
+            <div>
+                <label>Current BF %</label>
+                <input type="number" id="c-bf" value="20" step="0.1">
+            </div>
+            <div>
+                <label>Goal BF %</label>
+                <input type="number" id="g-bf" value="12" step="0.1">
+            </div>
+            <div>
+                <label>Today's Deficit</label>
+                <input type="number" id="def" value="500">
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>Starting BF% (Last Scan/Estimate)</label>
-            <input type="number" id="start-bf" value="20" oninput="calculate()">
+        <div class="summary">
+            <span style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Predicted Goal Date</span>
+            <span id="date-out" class="date-val">---</span>
         </div>
 
-        <div class="input-group">
-            <label>Today's Deficit (e.g. 500) or Surplus (e.g. -500)</label>
-            <input type="number" id="daily-deficit" value="500" oninput="calculate()">
-        </div>
+        <button class="btn" onclick="saveEntry()">SAVE TODAY'S LOG</button>
 
-        <div class="result-box">
-            <div class="stat-label">Predicted 12% Date</div>
-            <div class="date-highlight" id="goal-date">--</div>
-            
-            <div class="stat-label" style="margin-top: 15px;">Lbs of Fat Remaining</div>
-            <div id="fat-remaining" style="color: #00ff96; font-weight: bold;">-- lbs</div>
-        </div>
+        <h2 style="font-size: 0.9rem; color: #666;">History</h2>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Weight</th>
+                    <th>BF%</th>
+                    <th>Deficit</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                </tbody>
+        </table>
     </div>
 
 <script>
-    function calculate() {
-        // 1. Get Inputs
-        const weight = parseFloat(document.getElementById('weight').value);
-        const startBF = parseFloat(document.getElementById('start-bf').value) / 100;
-        const deficit = parseFloat(document.getElementById('daily-deficit').value);
+    function calculateDate() {
+        const w = parseFloat(document.getElementById('w').value);
+        const cbf = parseFloat(document.getElementById('c-bf').value) / 100;
+        const gbf = parseFloat(document.getElementById('g-bf').value) / 100;
+        const deficit = parseFloat(document.getElementById('def').value);
+
+        if (!w || !cbf || !gbf) return;
+
+        const lbm = w * (1 - cbf);
+        const targetW = lbm / (1 - gbf);
+        const lbsToGo = w - targetW;
+
+        const dateOut = document.getElementById('date-out');
         
-        if (!weight || !startBF) return;
-
-        // 2. Calculate Lean Body Mass (LBM)
-        const lbm = weight * (1 - startBF);
-        
-        // 3. Goal is 12% Body Fat (0.12)
-        // Goal Weight = LBM / (1 - 0.12)
-        const goalWeight = lbm / 0.88;
-        const lbsToLose = weight - goalWeight;
-
-        // 4. Update Displays
-        document.getElementById('current-bf-display').innerText = (startBF * 100).toFixed(1) + "%";
-        document.getElementById('fat-remaining').innerText = lbsToLose.toFixed(1) + " lbs";
-
-        // 5. Calculate Date (3500 calories = 1lb fat)
-        if (deficit > 0) {
-            const totalCalsNeeded = lbsToLose * 3500;
-            const daysRemaining = totalCalsNeeded / deficit;
-            
-            const targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + daysRemaining);
-            
-            const options = { month: 'long', day: 'numeric', year: 'numeric' };
-            document.getElementById('goal-date').innerText = targetDate.toLocaleDateString(undefined, options);
-            document.getElementById('goal-date').style.color = "#fff";
+        if (deficit > 0 && lbsToGo > 0) {
+            const days = (lbsToGo * 3500) / deficit;
+            const goalDate = new Date();
+            goalDate.setDate(goalDate.getDate() + days);
+            dateOut.innerText = goalDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            dateOut.style.color = "white";
+        } else if (lbsToGo <= 0) {
+            dateOut.innerText = "GOAL REACHED";
+            dateOut.style.color = "var(--accent)";
         } else {
-            document.getElementById('goal-date').innerText = "NEVER (Surplus)";
-            document.getElementById('goal-date').style.color = "#ff4d4d";
+            dateOut.innerText = "NEVER (Surplus)";
+            dateOut.style.color = "#ff4d4d";
         }
     }
 
-    // Initialize
-    calculate();
+    function saveEntry() {
+        const date = new Date().toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' });
+        const weight = document.getElementById('w').value;
+        const bf = document.getElementById('c-bf').value;
+        const deficit = document.getElementById('def').value;
+        
+        const table = document.getElementById('history-body');
+        const row = table.insertRow(0);
+        
+        const defClass = deficit >= 0 ? 'pos-def' : 'neg-def';
+        
+        row.innerHTML = `
+            <td>${date}</td>
+            <td>${weight}</td>
+            <td>${bf}%</td>
+            <td class="${defClass}">${deficit}</td>
+        `;
+    }
+
+    // Auto-calculate on any input change
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', calculateDate);
+    });
+
+    calculateDate();
 </script>
 
 </body>
